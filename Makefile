@@ -21,7 +21,7 @@ PORT 	   = /dev/cu.wchusbserial1410
 DEVICE     = atmega328p
 CLOCK      = 16000000
 PROGRAMMER = -c arduino -P $(PORT) -b 57600
-OBJECTS    = main.o
+OBJECTS    = main.o spi.o uart.o
 FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0x24:m
 
 # ATMega8 fuse bits used above (fuse bits for other devices are different!):
