@@ -1,114 +1,23 @@
-#include <avr/io.h>
-#include <avr/eeprom.h>
-#include <util/delay.h>
+#include "common.h"
 
-#define F_CPU 16000000UL
-#define BAUD 115200
-#include <util/setbaud.h>
-
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-#define MASTER
-
-
-// SPI
-#define SPI_DDR     DDRB
-#define SPI_PORT    PORTB
-
-#define SCK         PORTB5
-#define MISO        PORTB4
-#define MOSI        PORTB3
-#define SS          PORTB2
-
-static char esc = 0;
-static char lbracket = 0;
+//global variables
+char esc = 0;
+char lbracket = 0;
 
 char prompt[20] = "console > ";
 
 typedef struct {
-    char text[30];
+    char text[CMDSIZE];
 }Console;
 
-Console console[20];
-char cmdbuf[30];
+Console console[HISTSIZE];
+char cmdbuf[CMDSIZE];
 // cursors position
 int x, y;
 int cy = -1;
 
-void uart_init(void);
-int uart_putchar(char c, FILE *stream);
-int uart_getchar(FILE *stream);
-void clearScreen();
-void setCursor(int x, int y);
-void specialKey(char c);
-void func(char *cmd);
-
 FILE uart_output = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 FILE uart_input = FDEV_SETUP_STREAM(NULL, uart_getchar, _FDEV_SETUP_READ);
-
-void SPI_init()
-{
-#ifdef MASTER
-    SPI_PORT |= _BV(SS);
-    SPI_DDR |= (_BV(SS) | _BV(SCK) | _BV(MOSI));
-    SPCR = (_BV(SPE) | _BV(MSTR) | _BV(SPR0)); // 16M/16=1Mhz
-#else
-    SPI_DDR |= _BV(MISO);
-    SPCR = _BV(SPE);
-#endif // MASTER
-}
-
-unsigned char masterWrite(unsigned char data)
-{
-    SPI_PORT &= ~_BV(SS);
-    SPDR = data;
-    while (!(SPSR & _BV(SPIF)));
-    return SPDR;
-}
-
-unsigned char slaveRead(unsigned char prev)
-{
-    SPDR = prev;
-    while (!(SPSR & _BV(SPIF)));
-
-    return SPDR;
-}
-
-void uart_init(void)
-{
-	UBRR0H = UBRRH_VALUE;
-	UBRR0L = UBRRL_VALUE;
-
-#if USE_2X
-	UCSR0A |= _BV(U2X0);	// bxxxx xx1x
-#else
-	UCSR0A &= ~(_BV(U2X0));	// bxxxx xx0x
-#endif
-
-	UCSR0C = _BV(UCSZ01) | _BV(UCSZ00); /* 8-bit data */
-	UCSR0B = _BV(RXEN0) | _BV(TXEN0);   /* Enable RX and TX */
-}
-
-int uart_putchar(char c, FILE *stream)
-{
-    if (c == '\n')
-	{
-		uart_putchar('\r', stream);
-	}
-
-	loop_until_bit_is_set(UCSR0A, UDRE0);
-
-    UDR0 = c;
-    return c;
-}
-
-int uart_getchar(FILE *stream)
-{
-	loop_until_bit_is_set(UCSR0A, RXC0);
-	return (char)UDR0;
-}
 
 void clearScreen()
 {
@@ -127,6 +36,7 @@ void key(char c)
     int i;
 	switch(c)
 	{
+    // return and run command
 	case 13:
 	    x = 0;
 	    putchar('\n');
@@ -135,7 +45,7 @@ void key(char c)
         {
             strcpy(console[y].text, cmdbuf);
             func(cmdbuf);
-            y = (y + 1) % 20;
+            y = (y + 1) % HISTSIZE;
             console[y].text[0] = '\0';
             cmdbuf[0] = '\0';
         }
@@ -143,6 +53,7 @@ void key(char c)
 	    printf("%s", prompt);
 	    cy = -1;
 		break;
+    // backspace
 	case 8:
 		if (x > 0)
         {
@@ -166,21 +77,26 @@ void key(char c)
             }
         }
 		break;
+    // default processing
     default:
+        // get escape character
         if (!esc && !lbracket && c == 27)
         {
             esc = 1;
             putchar(c);
             return;
         }
+        // get left bracket character
         else if (esc && !lbracket && c == 91)
         {
             lbracket = 1;
             putchar(c);
             return;
         }
+        // arrow key handling
         else if (esc && lbracket && c > 64 && c < 69)
         {
+            // ignore default action
             switch(c)
             {
             case 65:
@@ -194,18 +110,19 @@ void key(char c)
                 putchar('D');
             }
 
+            // cy is cursor y coordinate.
+            // scoping command history up and down
             if (cy == -1) cy = y;
-
             if (c == 65)
             {
                 cy--;
 
                 if (cy < 0)
-                    cy = 20 + cy;
+                    cy = HISTSIZE + cy;
 
                 if (console[cy].text[0] == '\0')
                 {
-                    cy = (cy + 1) % 20;
+                    cy = (cy + 1) % HISTSIZE;
                 }
                 else
                 {
@@ -224,12 +141,13 @@ void key(char c)
                 else
                 {
                     printf("%c[2K\r", 27);
-                    cy = (cy + 1) % 20;
+                    cy = (cy + 1) % HISTSIZE;
                     printf("%s%s", prompt, console[cy].text);
                     strcpy(cmdbuf, console[cy].text);
                     x = strlen(cmdbuf);
                 }
             }
+            // move cursor in current command left and right
             else if (c == 67)
             {
                 if(x < strlen(cmdbuf))
@@ -261,9 +179,10 @@ void key(char c)
             lbracket = 0;
         }
 
-        if (strlen(cmdbuf) < 29)
+        // store string to command buffer
+        if (strlen(cmdbuf) < CMDSIZE - 1)
         {
-            for (i = 28; i >= x; i--)
+            for (i = CMDSIZE-2; i >= x; i--)
             {
                 cmdbuf[i + 1] = cmdbuf[i];
             }
@@ -273,6 +192,7 @@ void key(char c)
             printf("%s%s", prompt, cmdbuf);
             int len = strlen(cmdbuf);
 
+            // cursor relocation
             for (i = 0; i < len - x; i++)
             {
                 putchar(27);
@@ -285,7 +205,6 @@ void key(char c)
 	}
 }
 
-#define CMD_NUM     6
 char *cmdList[CMD_NUM] =
 {
     "history",
@@ -300,7 +219,7 @@ void func(char *args)
 {
     char *token;
     char *rest;
-    char str[30];
+    char str[CMDSIZE];
     char *argv[10];
     int argc = 0;
     int i, j;
@@ -309,6 +228,7 @@ void func(char *args)
     strcpy(str, args);
     rest = str;
 
+    // tokenizing
     while((token = strtok_r(rest, " ", &rest)))
     {
         int len = strlen(token);
@@ -320,17 +240,21 @@ void func(char *args)
 
     char *cmd = argv[0];
 
+    // processing command
+    // show command history
     if (strcmp(cmd, "history") == 0)
     {
-        for (j = 0, i = y + 1; j <20 ; i++, j++)
+        for (j = 0, i = y + 1; j <HISTSIZE ; i++, j++)
         {
-            printf("%2d \t %s\n", j + 1, console[i%20].text);
+            printf("%2d \t %s\n", j + 1, console[i%HISTSIZE].text);
         }
     }
+    // clear screen
     else if (strcmp(cmd, "clear") == 0)
     {
         clearScreen();
     }
+    // check command
     else if (strcmp(cmd, "ls") == 0)
     {
         for (i = 0; i < CMD_NUM; i++)
@@ -339,6 +263,7 @@ void func(char *args)
         }
         putchar('\n');
     }
+    // read/write EEPROM
     else if (strcmp(cmd, "rwb") == 0 || strcmp(cmd, "rww") == 0)
     {
         if (argc < 3)
@@ -394,6 +319,7 @@ void func(char *args)
         }
     }
     #ifdef MASTER
+    // spi communication
     else if (strcmp(cmd, "spi") == 0)
     {
         if (argc < 2)
@@ -422,11 +348,13 @@ void func(char *args)
         printf("ret %d\n", masterWrite(atoi(argv[1])));
     }
     #endif // MASTER
+    // error handling
     else
     {
         printf("undefined command \"%s\"\n", cmd);
     }
 
+    // free memory
     for (i = 0; i < argc; i++)
     {
         free(argv[i]);
@@ -435,8 +363,12 @@ void func(char *args)
 
 int main(void)
 {
+    // SPI init
     SPI_init();
+
+    // UART init
 	uart_init();
+	// binding uart get/put to stdio
 	stdout = &uart_output;
 	stdin  = &uart_input;
 
@@ -446,6 +378,8 @@ int main(void)
 #ifndef MASTER
     unsigned char n = 0;
 #endif // MASTER
+
+    // main loop
     for(;;){
         /* insert your main loop code here */
 
