@@ -3,7 +3,7 @@
 #include <util/delay.h>
 
 #define F_CPU 16000000UL
-#define BAUD 57600
+#define BAUD 115200
 #include <util/setbaud.h>
 
 #include <stdio.h>
@@ -32,6 +32,7 @@ typedef struct {
 }Console;
 
 Console console[20];
+char cmdbuf[30];
 // cursors position
 int x, y;
 int cy = -1;
@@ -123,17 +124,20 @@ void setCursor(int x, int y)
 
 void key(char c)
 {
+    int i;
 	switch(c)
 	{
 	case 13:
 	    x = 0;
 	    putchar('\n');
 
-	    if (strlen(console[y].text) > 0)
+	    if (strlen(cmdbuf) > 0)
         {
-            func(console[y].text);
+            strcpy(console[y].text, cmdbuf);
+            func(cmdbuf);
             y = (y + 1) % 20;
-            memset(console[y].text, '\0', sizeof(console[y].text));
+            console[y].text[0] = '\0';
+            cmdbuf[0] = '\0';
         }
 
 	    printf("%s", prompt);
@@ -142,11 +146,24 @@ void key(char c)
 	case 8:
 		if (x > 0)
         {
-            putchar('\b');
-            putchar(' ');
             x--;
-            console[y].text[x] = '\0';
-            putchar(c);
+            i = x;
+            while (cmdbuf[i] != '\0')
+            {
+                cmdbuf[i] = cmdbuf[i+1];
+                i++;
+            }
+            printf("%c[2K\r", 27);
+            printf("%s%s", prompt, cmdbuf);
+
+            int len = strlen(cmdbuf);
+
+            for (i = 0; i < len - x; i++)
+            {
+                putchar(27);
+                putchar(91);
+                putchar('D');
+            }
         }
 		break;
     default:
@@ -177,39 +194,61 @@ void key(char c)
                 putchar('D');
             }
 
+            if (cy == -1) cy = y;
+
             if (c == 65)
             {
-                if (cy == -1) cy = y;
-                printf("%c[2K\r", 27);
-                printf("c%d %d\n", cy, y);
-                cy = cy - 1;
-                if (cy < 0)
-                    cy = 20 - cy;
+                cy--;
 
-                if (strlen(console[cy].text) <= 0)
+                if (cy < 0)
+                    cy = 20 + cy;
+
+                if (console[cy].text[0] == '\0')
                 {
-                    printf("a%d %d\n", cy, y);
                     cy = (cy + 1) % 20;
                 }
-                printf("%s%s", prompt, console[cy].text);
-                strcpy(console[y].text, console[cy].text);
-                x = strlen(console[y].text);
+                else
+                {
+                    printf("%c[2K\r", 27);
+                    printf("%s%s", prompt, console[cy].text);
+                    strcpy(cmdbuf, console[cy].text);
+                    x = strlen(cmdbuf);
+                }
             }
             else if ( c == 66)
             {
-                if (cy == -1) cy = y;
-                printf("%c[2K\r", 27);
-                cy = (cy + 1) % 20;
-                if (strlen(console[cy].text) <= 0)
+                if (console[cy].text[0] == '\0' || y - cy == 0)
                 {
-                    cy = cy - 1;
-                    if (cy < 0)
-                        cy = 20 - cy;
-                }
 
-                printf("%s%s", prompt, console[cy].text);
-                strcpy(console[y].text, console[cy].text);
-                x = strlen(console[y].text);
+                }
+                else
+                {
+                    printf("%c[2K\r", 27);
+                    cy = (cy + 1) % 20;
+                    printf("%s%s", prompt, console[cy].text);
+                    strcpy(cmdbuf, console[cy].text);
+                    x = strlen(cmdbuf);
+                }
+            }
+            else if (c == 67)
+            {
+                if(x < strlen(cmdbuf))
+                {
+                    putchar(27);
+                    putchar(91);
+                    putchar('C');
+                    x++;
+                }
+            }
+            else if (c == 68)
+            {
+                if(x > 0)
+                {
+                    putchar(27);
+                    putchar(91);
+                    putchar('D');
+                    x--;
+                }
             }
 
             esc = 0;
@@ -222,13 +261,26 @@ void key(char c)
             lbracket = 0;
         }
 
-        if (x < 29)
+        if (strlen(cmdbuf) < 29)
         {
-            console[y].text[x] = c;
+            for (i = 28; i >= x; i--)
+            {
+                cmdbuf[i + 1] = cmdbuf[i];
+            }
+            cmdbuf[x] = c;
             x++;
+            printf("%c[2K\r", 27);
+            printf("%s%s", prompt, cmdbuf);
+            int len = strlen(cmdbuf);
+
+            for (i = 0; i < len - x; i++)
+            {
+                putchar(27);
+                putchar(91);
+                putchar('D');
+            }
         }
-		putchar(c);
-		console[y].text[x] = '\0';
+
 		break;
 	}
 }
@@ -372,7 +424,7 @@ void func(char *args)
     #endif // MASTER
     else
     {
-        printf("undefine comman \"%s\"\n", cmd);
+        printf("undefined command \"%s\"\n", cmd);
     }
 
     for (i = 0; i < argc; i++)
@@ -380,7 +432,6 @@ void func(char *args)
         free(argv[i]);
     }
 }
-
 
 int main(void)
 {
