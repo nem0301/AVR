@@ -5,7 +5,6 @@
 #include <avr/eeprom.h>
 #include <util/delay.h>
 
-#define F_CPU 16000000UL
 #define BAUD 57600
 #include <util/setbaud.h>
 
