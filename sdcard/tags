@@ -1,0 +1,58 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+-format	Makefile	/^	avr-size --format=sysv $^$/;"	m
+BAUDRATE	Makefile	/^BAUDRATE   = 57600$/;"	m
+CC	Makefile	/^CC = avr-gcc$/;"	m
+CFLAGS	Makefile	/^CFLAGS  = -Wall -Os -DF_CPU=$(CLOCK) -DBAUD=$(BAUDRATE) -mmcu=$(DEVICE) -I$(HDR_DIR)$/;"	m
+CLOCK	Makefile	/^CLOCK      = 16000000$/;"	m
+CMDSIZE	hdr/common.h	6;"	d
+CMD_NUM	hdr/common.h	5;"	d
+Console	src/main.c	/^}Console;$/;"	t	typeref:struct:__anon1	file:
+DEVICE	Makefile	/^DEVICE     = atmega328p$/;"	m
+HDR_DIR	Makefile	/^HDR_DIR    = .\/hdr$/;"	m
+HISTSIZE	hdr/common.h	7;"	d
+ISR	src/spi.c	/^ISR (SIP_STC_vect)$/;"	f
+LIBS	Makefile	/^LIBS = -mmcu=$(DEVICE)$/;"	m
+MISO	hdr/spi.h	10;"	d
+MOSI	hdr/spi.h	11;"	d
+OBJS	Makefile	/^OBJS = $(SRCS:$(SRC_DIR)\/%.c=$(OBJ_DIR)\/%.o)$/;"	m
+OBJ_DIR	Makefile	/^OBJ_DIR    = .\/obj$/;"	m
+PROG	Makefile	/^PROG = spidebug$/;"	m
+SCK	hdr/spi.h	9;"	d
+SPI_DDR	hdr/spi.h	6;"	d
+SPI_PORT	hdr/spi.h	7;"	d
+SRCS	Makefile	/^SRCS = $(wildcard $(SRC_DIR)\/*.c)$/;"	m
+SRC_DIR	Makefile	/^SRC_DIR    = .\/src$/;"	m
+SS	hdr/spi.h	12;"	d
+TGT_DIR	Makefile	/^TGT_DIR    = .\/tgt$/;"	m
+__COMMON_H__	hdr/common.h	2;"	d
+__SPI_H__	hdr/spi.h	2;"	d
+__UART_H__	hdr/uart.h	2;"	d
+clearScreen	src/main.c	/^void clearScreen()$/;"	f
+cmdList	src/main.c	/^char *cmdList[CMD_NUM] =$/;"	v
+cmdbuf	src/main.c	/^char cmdbuf[CMDSIZE];$/;"	v
+console	src/main.c	/^Console console[HISTSIZE];$/;"	v
+cy	src/main.c	/^int cy = -1;$/;"	v
+esc	src/main.c	/^char esc = 0;$/;"	v
+func	src/main.c	/^void func(char *args)$/;"	f
+key	src/main.c	/^void key(char c)$/;"	f
+lbracket	src/main.c	/^char lbracket = 0;$/;"	v
+main	src/main.c	/^int main(void)$/;"	f
+prompt	src/main.c	/^char prompt[20] = "console > ";$/;"	v
+setCursor	src/main.c	/^void setCursor(int x, int y)$/;"	f
+spiInit	src/spi.c	/^void spiInit(int ms)$/;"	f
+spiRead	src/spi.c	/^void spiRead(unsigned char addr, unsigned char *data)$/;"	f
+spiSlave	src/spi.c	/^unsigned char spiSlave(void)$/;"	f
+spiWrite	src/spi.c	/^void spiWrite(unsigned char addr, unsigned char data)$/;"	f
+text	src/main.c	/^    char text[CMDSIZE];$/;"	m	struct:__anon1	file:
+uart_getchar	src/uart.c	/^int uart_getchar(FILE *stream)$/;"	f
+uart_init	src/uart.c	/^void uart_init(void)$/;"	f
+uart_input	src/uart.c	/^FILE uart_input = FDEV_SETUP_STREAM(NULL, uart_getchar, _FDEV_SETUP_READ);$/;"	v
+uart_output	src/uart.c	/^FILE uart_output = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);$/;"	v
+uart_putchar	src/uart.c	/^int uart_putchar(char c, FILE *stream)$/;"	f
+x	src/main.c	/^int x, y;$/;"	v
+y	src/main.c	/^int x, y;$/;"	v
