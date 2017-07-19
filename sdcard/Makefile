@@ -1,4 +1,4 @@
-DEVICE     = atmega328pb
+DEVICE     = atmega328p
 CLOCK      = 16000000
 BAUDRATE   = 57600
 
@@ -19,18 +19,18 @@ LIBS = -mmcu=$(DEVICE)
 
 all : $(TGT_DIR)/$(PROG).hex
 	@rm -f $(OBJ_DIR)/*
-	@cp $^ ~/tmp
 
 $(TGT_DIR)/$(PROG).elf: $(OBJS)
 	$(CC) -o $@ $(OBJS) $(LIBS)
 
 $(TGT_DIR)/$(PROG).hex: $(TGT_DIR)/$(PROG).elf
-	rm -f $@
+	@rm -f $@
 	avr-objcopy -j .text -j .data -O ihex $^ $@
 	avr-objcopy -I ihex -O binary $@ $(TGT_DIR)/FIRMWARE.BIN
 	avr-size --format=sysv $^
 
 $(OBJS) : $(OBJ_DIR)/%.o : $(SRC_DIR)/%.c
+	@mkdir -p $(TGT_DIR) $(OBJ_DIR)
 	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
