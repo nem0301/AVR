@@ -116,10 +116,15 @@ void func(char *args)
 int main(void)
 {
     // UART init
-	uart_init();
+	// uart_init();
 
 	oledInit();
 
+	oledTest();
+
+	while (1)
+	{
+	}
 	clearScreen();
 
 	printf("%s\n", prompt);
