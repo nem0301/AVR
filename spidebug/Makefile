@@ -1,6 +1,7 @@
 DEVICE     = atmega328p
 CLOCK      = 16000000
 BAUDRATE   = 57600
+PORT       = /dev/ttyUSB0
 
 SRC_DIR    = ./src
 HDR_DIR    = ./hdr
@@ -20,6 +21,11 @@ all : $(TGT_DIR)/$(PROG).hex
 	@rm -f $(OBJ_DIR)/*
 	@cp $^ ~/tmp
 	@cp $(TGT_DIR)/FIRMWARE.BIN ~/tmp
+
+flash : $(TGT_DIR)/$(PROG).hex
+	@rm -f $(OBJ_DIR)/*
+	avrdude -F -V -c arduino -p $(DEVICE) -P $(PORT) -b $(BAUDRATE) -U flash:w:$^
+	@rm -f $(OBJ_DIR)/*
 
 $(TGT_DIR)/$(PROG).elf: $(OBJS)
 	$(CC) -o $@ $(OBJS) $(LIBS)

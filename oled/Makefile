@@ -24,6 +24,7 @@ all : $(TGT_DIR)/$(PROG).hex
 	@cp $^ ~/tmp
 
 flash : $(TGT_DIR)/$(PROG).hex
+	@rm -f $(OBJ_DIR)/*
 	avrdude -F -V -c arduino -p $(DEVICE) -P $(PORT) -b $(BAUDRATE) -U flash:w:$^
 	@rm -f $(OBJ_DIR)/*
 
